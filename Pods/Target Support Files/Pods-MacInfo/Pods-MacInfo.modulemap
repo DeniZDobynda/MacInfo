@@ -1,0 +1,6 @@
+framework module Pods_MacInfo {
+  umbrella header "Pods-MacInfo-umbrella.h"
+
+  export *
+  module * { export * }
+}

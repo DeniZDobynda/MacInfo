@@ -1,0 +1,22 @@
+PODS:
+  - Charts (3.2.1):
+    - Charts/Core (= 3.2.1)
+  - Charts/Core (3.2.1)
+  - SwiftSocket (2.0.2)
+
+DEPENDENCIES:
+  - Charts
+  - SwiftSocket
+
+SPEC REPOS:
+  https://github.com/cocoapods/specs.git:
+    - Charts
+    - SwiftSocket
+
+SPEC CHECKSUMS:
+  Charts: f122fb70b19847fa5817d018b77d6c5a2296ab25
+  SwiftSocket: 6f4c9c63fbc5c1d61188936bb3c599fd546f40ae
+
+PODFILE CHECKSUM: 6d82eb44cb192d4736fd0d44b618a9807bfeb402
+
+COCOAPODS: 1.5.3

@@ -8,11 +8,109 @@
 
 import UIKit
 import CoreData
+import SwiftSocket
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
+    private var tcpClient: TCPClient?
+    private var alive = false
+    
+    static var connection: TCPClient? {
+        get {
+            return AppDelegate.instance.tcpClient
+        }
+        set {
+            if AppDelegate.instance.tcpClient != nil {
+                AppDelegate.instance.closeConnection()
+            }
+            AppDelegate.instance.tcpClient = newValue
+            if newValue != nil {
+                switch newValue!.send(string: "0") {
+                case .failure(let e):
+                    print(e)
+                case .success:
+                    AppDelegate.instance.startListening()
+                }
+            }
+        }
+    }
+    
+    private func startListening() {
+        alive = true
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            while self != nil, self!.alive {
+                if let server = self?.tcpClient, let data = server.read(1024*10),
+                    let strData = String(bytes: data, encoding: .utf8) {
+                    self?.lastMessage = strData
+                    if strData.contains("terminate") {
+                        self?.alive = false
+                        server.close()
+                        self?.connectionClosed()
+                        return
+                    }
+                }
+                sleep(1)
+            }
+        }
+    }
+    
+    private func stopListening() {
+        alive = false
+    }
+    
+    private func closeConnection() {
+        if let server = tcpClient {
+            switch server.send(string: "close") {
+            case .failure(let e):
+                print(e)
+            case .success: break
+            }
+            server.close()
+        }
+        stopListening()
+        connectionClosed()
+    }
+    
+    private var lastMessage: String? {
+        didSet {
+            if let message = lastMessage {
+                delegates.forEach() {$0.TCPConnectionReceivedAsync(message)}
+            }
+        }
+    }
+    
+    private var delegates: [TCPConnectionMessageServiceAsync] = [] {
+        didSet {
+            if let message = lastMessage {
+                delegates.last?.TCPConnectionReceivedAsync(message)
+            }
+        }
+    }
+    
+    private func connectionClosed() {
+        delegates.forEach() {$0.TCPConnectionTerminatedAsync()}
+    }
+    
+    static func addMessageDelegate(_ delegate: TCPConnectionMessageServiceAsync) {
+        AppDelegate.instance.delegates.append(delegate)
+    }
+    
+    static func removeMessageDelegate(_ delegate: TCPConnectionMessageServiceAsync) {
+        for i in 0..<AppDelegate.instance.delegates.count {
+            if AppDelegate.instance.delegates[i].hashValue == delegate.hashValue {
+                AppDelegate.instance.delegates.remove(at: i)
+                return
+            }
+        }
+    }
+    
+    static var instance: AppDelegate {
+        get {
+            return UIApplication.shared.delegate as! AppDelegate
+        }
+    }
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
